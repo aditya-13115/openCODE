@@ -1,26 +1,41 @@
-# openCODE — Personal OpenCode AI Engineering Workspace
+# openCODE — OpenCode AI Engineering Workspace
 
-A portable Windows-first workspace for using OpenCode with reusable skills, agent workflows, and specialist tools for software engineering, AI/ML, LLM applications, evaluation, and browser automation.
+A Windows-first, reusable OpenCode workspace that brings together AI engineering skills, structured agent workflows, and specialist tools for software development, AI/ML, LLM applications, evaluation, and browser automation.
 
-This repository brings together seven upstream projects. It keeps your selected skills in `.agents/skills`, keeps a portable OpenCode config template under `config/`, and uses a setup script to install OpenAgents agents/commands/context into your user-level OpenCode config on the current machine.
+The repository keeps selected skills in `.agents/skills/`, a portable OpenCode configuration template in `config/`, and a PowerShell setup script that downloads the required source repositories and can install OpenAgents agents, commands, and context into the current Windows user's global OpenCode configuration.
 
-> **Important:** `config/opencode.jsonc.example` is the portable template. The active user-level config belongs at `%USERPROFILE%\.config\opencode\opencode.jsonc`. Do not commit machine-specific global config snapshots, `node_modules`, tokens, or secrets.
+> **Important:** Commit `config/opencode.jsonc.example`, not a machine-specific active configuration. The active user configuration is normally `%USERPROFILE%\.config\opencode\opencode.jsonc`. Never commit API keys, `.env` files, tokens, local logs, or other secrets.
+
+## Contents
+
+- [What's included](#whats-included)
+- [How plugins, skills, agents, commands, and context differ](#how-the-components-differ)
+- [Repository layout](#repository-layout)
+- [Quick start on Windows](#quick-start-on-windows)
+- [Configuration explained](#configuration-explained)
+- [Using the workspace](#using-the-workspace)
+- [Updating skills and source repositories](#updating-skills-and-source-repositories)
+- [Troubleshooting](#troubleshooting)
+- [Security and licensing notes](#security-and-licensing-notes)
+- [Upstream projects](#upstream-projects)
 
 ## What's included
 
-| Upstream project | What it contributes | How this workspace uses it |
+| Project | What it provides | How this workspace uses it |
 |---|---|---|
-| [obra/superpowers](https://github.com/obra/superpowers) | A development-workflow skill framework: brainstorming, planning, systematic debugging, test-driven development, code review, and related workflows. | Installed as an OpenCode V2 plugin through the `plugins` array. The plugin registers its skills; a separate local clone is not required. |
-| [mattpocock/skills](https://github.com/mattpocock/skills) | Engineering, architecture, debugging, planning, product-thinking, testing, and writing skills. | The inspected `skills-lock.json` records 38 selected skills installed under `.agents/skills`. |
-| [huggingface/skills](https://github.com/huggingface/skills) | Hugging Face Hub, datasets, model training, Spaces, evaluation, inference, and deployment workflows. | The inspected `skills-lock.json` records 25 selected skills under `.agents/skills`. `hf-cli` is a useful starting point. Some workflows require the `hf` CLI, authentication, cloud permissions, or extra Python packages. |
-| [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) | Production-oriented engineering workflows: TDD, specification-driven development, incremental implementation, security, performance, observability, documentation, and review. | The repository's `skills/` directory is added as a skill source. The inspected snapshot has 25 skill folders. |
-| [mlflow/skills](https://github.com/mlflow/skills) | MLflow onboarding, trace analysis, agent debugging, tracing instrumentation, evaluation/scorers, and metrics. | The repository root is added as a skill source; the inspected snapshot has 13 folders containing `SKILL.md`. Some skills need a working MLflow installation, a reachable tracking server, data, or credentials. |
-| [anthropics/skills](https://github.com/anthropics/skills) | Examples for frontend design, web-app testing, MCP building, skill creation, artifacts, and document workflows. | The `skills/` directory is an extra skill source. The inspected snapshot has 19 skill folders. The full source clone is fetched locally by the setup script and intentionally ignored by Git; see the licensing note below. |
-| [remcocats/opencode-agents](https://github.com/remcocats/opencode-agents) | A plan-first agent framework: primary agents, specialist subagents, slash commands, context/standards, and optional plugins/tools. | `scripts/setup-opencode.ps1` copies its local `.opencode/agent`, `.opencode/command`, and `.opencode/context` content into the user's global OpenCode config. Optional plugins/tools are not copied automatically because they may need dependency installation or version-specific migration. |
+| [obra/superpowers](https://github.com/obra/superpowers) | Development workflows such as brainstorming, planning, systematic debugging, test-driven development, and code review. | Loaded as an OpenCode V2 plugin through the `plugins` array. OpenCode manages the Git-backed plugin installation; a separate local clone is not required. |
+| [mattpocock/skills](https://github.com/mattpocock/skills) | Engineering, architecture, debugging, planning, product thinking, testing, and writing skills. | Selected skill copies are stored under `.agents/skills/` and tracked with `skills-lock.json`. |
+| [huggingface/skills](https://github.com/huggingface/skills) | Hugging Face Hub, datasets, model training, Spaces, evaluation, inference, and deployment workflows. | Selected skill copies are stored under `.agents/skills/`. Some workflows require the `hf` CLI, authentication, cloud permissions, or extra Python packages. |
+| [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) | Production-oriented engineering workflows for TDD, specification-driven development, security, performance, observability, documentation, and review. | Cloned locally by the setup script; its `skills/` folder is configured as an additional skill source. |
+| [mlflow/skills](https://github.com/mlflow/skills) | MLflow onboarding, trace analysis, agent debugging, tracing instrumentation, evaluation/scorers, and metrics. | Cloned locally by the setup script; the repository root is configured as a skill source. Some workflows require MLflow, a reachable tracking server, data, or credentials. |
+| [anthropics/skills](https://github.com/anthropics/skills) | Examples for frontend design, web-app testing, MCP building, skill creation, and document workflows. | Cloned locally by the setup script; its `skills/` folder is configured as an additional skill source. Review individual upstream license terms before redistributing files. |
+| [remcocats/opencode-agents](https://github.com/remcocats/opencode-agents) | Primary agents, specialist subagents, slash commands, context/standards, and optional plugins/tools. | Cloned locally by the setup script. The script can copy `.opencode/agent`, `.opencode/command`, and `.opencode/context` into the user's global OpenCode configuration. Optional plugins and tools are not installed automatically. |
 
-### Extra skill already present
+### Additional skill/tool: Agent Browser
 
-The current `.agents/skills` snapshot also contains `agent-browser` from [vercel-labs/agent-browser](https://github.com/vercel-labs/agent-browser). The skill is instructions for an AI agent; it is **not** the browser automation executable. To use browser automation itself, install and verify the CLI separately:
+The selected `.agents/skills/` snapshot also includes the `agent-browser` skill from [vercel-labs/agent-browser](https://github.com/vercel-labs/agent-browser). The skill contains instructions for an AI agent; it is **not** the browser automation executable.
+
+To use the CLI, install it separately:
 
 ```powershell
 npm install -g agent-browser
@@ -30,19 +45,21 @@ agent-browser snapshot
 agent-browser close
 ```
 
-## Concepts: plugin vs. skill vs. agent vs. command vs. context
+The snapshot recorded in this workspace included 38 selected Matt Pocock skills, 25 selected Hugging Face skills, and the Agent Browser skill under `.agents/skills/`. Counts can change as skills are added or removed; check `skills-lock.json` for the current selected-skill inventory.
 
-- **Plugin:** executable integration that extends OpenCode at runtime. Example: Superpowers is configured as a plugin.
-- **Skill:** reusable instructions and supporting files, usually a folder containing `SKILL.md`. OpenCode can load a skill when relevant or when asked.
-- **Agent:** a named persona/workflow with its own prompt and tool permissions. Example: `openagent` or `opencoder`.
-- **Command:** a reusable slash-command prompt template. Examples include `/test`, `/commit`, and `/optimize` when those command files are installed and discovered.
-- **Context:** supporting standards and workflow documents that agents/commands read during tasks.
+## How the components differ
 
-Adding a skill directory does not install tools or Python/Node dependencies mentioned in the skill. Install dependencies only when you use the relevant workflow and follow each project's instructions.
+- **Plugin:** Runtime integration that extends OpenCode. Example: Superpowers.
+- **Skill:** Reusable instructions and supporting files, usually stored in a directory containing `SKILL.md`.
+- **Agent:** A named workflow/persona with instructions and tool permissions. Examples in the OpenAgents snapshot include `openagent` and `opencoder`.
+- **Command:** A reusable slash-command prompt template, such as `/test` or `/commit`, when that command exists and is discovered by OpenCode.
+- **Context:** Standards and workflow documents that agents or commands can reference.
 
-## Layout
+Adding a skill source does not install the tools, Python packages, Node packages, credentials, or cloud access mentioned by a skill. Install those dependencies only when you need the corresponding workflow.
 
-The relevant tracked layout should look approximately like this:
+## Repository layout
+
+After setup, the workspace should look approximately like this:
 
 ```text
 openCODE/
@@ -51,21 +68,21 @@ openCODE/
 ├── .gitignore
 ├── skills-lock.json
 ├── .agents/
-│   └── skills/                    # selected skill copies (Matt Pocock, Hugging Face, Agent Browser)
+│   └── skills/                    # selected skill copies
 ├── config/
 │   ├── README.md
-│   └── opencode.jsonc.example     # portable template; no machine-specific paths
+│   └── opencode.jsonc.example     # portable config template
 ├── scripts/
-│   └── setup-opencode.ps1         # clones missing source repos and installs global OpenAgents files
+│   └── setup-opencode.ps1         # Windows setup script
 ├── addyosmani-agent-skills/       # local upstream clone; ignored by Git
 ├── anthropic-skills/              # local upstream clone; ignored by Git
 ├── mlflow-skills/                 # local upstream clone; ignored by Git
 └── openagents-repo/               # local upstream clone; ignored by Git
 ```
 
-The four upstream clone folders are created locally by the setup script and are ignored in the outer repository to avoid nested-Git-repository problems and unnecessary redistribution of upstream source. The `.agents/skills` directory and `skills-lock.json` preserve the 64 selected skill folders recorded in the inspected snapshot.
+The four source-clone folders are created locally by the setup script and should be ignored by the outer repository. This prevents accidentally nesting separate Git repositories or redistributing whole upstream checkouts. The selected skill copies, lock file, documentation, configuration template, and setup script are the reusable workspace assets.
 
-The actual global OpenCode files live outside this repo at:
+The active global OpenCode configuration and OpenAgents files live outside the repository, normally here on Windows:
 
 ```text
 %USERPROFILE%\.config\opencode\
@@ -75,74 +92,87 @@ The actual global OpenCode files live outside this repo at:
 └── context\
 ```
 
-The local `config/` folder is the tracked config template/documentation area. It is not automatically read by OpenCode just because it exists in this workspace.
+The local `config/` folder is tracked documentation/template content. OpenCode does not automatically load `config/opencode.jsonc.example` just because it exists in this repository.
 
-## Windows setup
+## Quick start on Windows
 
 ### Prerequisites
 
-- OpenCode installed and working.
+- OpenCode installed and working. This setup targets **OpenCode V2**; the Superpowers V2 plugin configuration requires OpenCode 2.0.4 or later.
 - Git for Windows installed and available in PowerShell (`git --version`).
-- PowerShell 5.1+ (Windows PowerShell or PowerShell 7).
-- Node.js/npm if you need the skills CLI or Agent Browser CLI.
+- Windows PowerShell 5.1+ or PowerShell 7.
+- Node.js/npm only if you need the Agent Browser CLI or the skills CLI.
 
-The OpenAgents installer was tried during setup, but it reported **Installed: 0, Failed: 68** after fetching its registry and failing to resolve component paths. For repeatable use, this workspace's script copies the needed files directly from the local clone rather than relying on that failed profile installation.
+### 1. Clone this repository
 
-### 1. Clone this workspace
-
-Replace `<your-github-repo-url>` with the URL of your own repository:
+Replace the placeholder with the URL of your own GitHub repository:
 
 ```powershell
-git clone <your-github-repo-url> openCODE
-cd openCODE
+git clone <YOUR_REPOSITORY_URL> openCODE
+Set-Location .\openCODE
 ```
 
 ### 2. Run the setup script
+
+Run this from the cloned repository root:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass -Force
 .\scripts\setup-opencode.ps1
 ```
 
-The script:
+The script performs these steps:
 
-1. Clones the Addy Osmani, Anthropic, MLflow, and OpenAgents source repositories if they are missing.
-2. Sets the per-user `OPENCODE_WORKSPACE` environment variable to this repo's current location, so skill paths work if the repo is cloned to a different drive/folder later.
-3. Creates a timestamped backup of existing global `agents`, `commands`, `context`, and `opencode.jsonc` files before changing them.
-4. Copies the OpenAgents agents, commands, and context from the local OpenAgents clone into `%USERPROFILE%\.config\opencode\`.
-5. Rewrites the context references in the installed global `openagent.md` to use the current user's global context directory.
-6. Asks before replacing the active global `opencode.jsonc` with the portable template. If you answer no, manually merge the template's `plugins` and `skills` keys into your existing active config.
+1. Clones the Addy Osmani, Anthropic, MLflow, and OpenAgents repositories if their local folders do not exist. It does not automatically pull updates into existing clones.
+2. Sets the per-user `OPENCODE_WORKSPACE` environment variable to the workspace path, using forward slashes so it can be safely substituted into JSONC on Windows.
+3. Asks whether to install OpenAgents agents, commands, and context globally. If approved, it backs up existing global folders and the active `opencode.jsonc`, then copies the OpenAgents files into the global configuration directory.
+4. If the first prompt is approved, asks separately whether to replace the active global `opencode.jsonc` with the template. The active config is backed up before replacement.
 
-It deliberately does **not** copy OpenAgents' optional `.opencode/plugin` or `.opencode/tool` code. Those components can have runtime dependencies or API-version constraints and should be installed/migrated separately when needed.
+**Pay attention to the two prompts:**
 
-### 3. Restart OpenCode and verify
+- For a new setup, type `YES` at the OpenAgents prompt. At the config prompt, type `YES` only if you are comfortable replacing the active config with the template.
+- If you already have a config with model/provider settings or other custom options, type `YES` at the OpenAgents prompt and `NO` at the config replacement prompt. Then merge the template's `plugins` and `skills` entries into your existing configuration manually.
+- If you type `NO` at the **first** prompt, the script returns early. It will have cloned the repositories and set `OPENCODE_WORKSPACE`, but it will not install the OpenAgents files or reach the config-replacement prompt. Run the script again and approve the first prompt when ready.
 
-Close and reopen the terminal/OpenCode process so the updated environment variable is available. Then run:
+The script deliberately does **not** install OpenAgents' optional `.opencode/plugin` or `.opencode/tool` code. Those components may require additional dependencies or migration between OpenCode API versions.
+
+### 3. Restart and verify
+
+Restart OpenCode after setup so the active configuration, plugin, and environment are reloaded. Open a new PowerShell window and check the workspace variable and configured directories:
 
 ```powershell
-opencode debug agents | ConvertFrom-Json |
-    Where-Object { $_.id -match 'openagent|opencoder|system-builder' } |
-    Select-Object id, name, description |
-    Format-Table -Wrap
+$env:OPENCODE_WORKSPACE
+Test-Path "$env:OPENCODE_WORKSPACE\.agents\skills"
+Test-Path "$env:OPENCODE_WORKSPACE\addyosmani-agent-skills\skills"
+Test-Path "$env:OPENCODE_WORKSPACE\mlflow-skills"
+Test-Path "$env:OPENCODE_WORKSPACE\anthropic-skills\skills"
 ```
 
-You should see `openagent`, `opencoder`, and `system-builder` among the discovered agents. You can also run a no-write test from any project directory:
+Each check should return `True`. Then inspect discovered agents:
+
+```powershell
+opencode debug agents
+```
+
+If the source snapshot contains them and the global installation succeeded, look for `openagent`, `opencoder`, and `system-builder`. You can test the main agent without requesting file changes:
 
 ```powershell
 opencode run --agent openagent "Explain your workflow. Do not modify files or execute commands."
 ```
 
-Inside the OpenCode TUI, use `/agents` to choose a primary agent and type `/` to inspect available commands. Specialist subagents (for example reviewer/tester) are generally delegated to by the main agent rather than selected as primary agents.
+Inside the OpenCode TUI, use `/agents` to inspect/select available agents and type `/` to browse discovered commands.
 
-## OpenCode JSONC configuration
+## Configuration explained
 
-OpenCode reads your active user-level configuration from this file on Windows:
+There are two distinct configuration files.
 
-```text
-%USERPROFILE%\.config\opencode\opencode.jsonc
-```
+### A. Portable template — tracked in Git
 
-To manually configure the same setup used on the original machine, open that file and add the following keys. If the file already contains settings, **merge these keys into the existing JSONC**—do not replace unrelated settings or create duplicate `plugins` or `skills` keys.
+**File:** `config/opencode.jsonc.example`
+
+This is the reusable template for GitHub. Do not put your personal drive, folder, or Windows username in it. The setup script creates the `OPENCODE_WORKSPACE` environment variable for the current clone location.
+
+The template should contain:
 
 ```jsonc
 {
@@ -151,70 +181,99 @@ To manually configure the same setup used on the original machine, open that fil
     "superpowers@git+https://github.com/obra/superpowers.git"
   ],
   "skills": [
-    "D:/CODIN PLAYGROUND/openCODE/.agents/skills",
-    "D:/CODIN PLAYGROUND/openCODE/addyosmani-agent-skills/skills",
-    "D:/CODIN PLAYGROUND/openCODE/mlflow-skills",
-    "D:/CODIN PLAYGROUND/openCODE/anthropic-skills/skills"
+    "{env:OPENCODE_WORKSPACE}/.agents/skills",
+    "{env:OPENCODE_WORKSPACE}/addyosmani-agent-skills/skills",
+    "{env:OPENCODE_WORKSPACE}/mlflow-skills",
+    "{env:OPENCODE_WORKSPACE}/anthropic-skills/skills"
   ]
 }
 ```
 
-**Important:** Those four skill paths are absolute paths for the original Windows machine. If your workspace is in a different location, update each path to match it. The source-clone directories (`addyosmani-agent-skills`, `mlflow-skills`, and `anthropic-skills`) must exist locally and contain skill folders with `SKILL.md` files.
+What each entry does:
 
-### Portable configuration for GitHub
+| Configuration entry | Type | What it loads |
+|---|---|---|
+| `plugins` → `superpowers@git+https://github.com/obra/superpowers.git` | Plugin | Installs/loads Superpowers through OpenCode's Git-backed plugin manager. Superpowers registers its own skills. |
+| `{env:OPENCODE_WORKSPACE}/.agents/skills` | Skill source | Selected copies from Matt Pocock and Hugging Face, plus the Agent Browser skill. |
+| `{env:OPENCODE_WORKSPACE}/addyosmani-agent-skills/skills` | Skill source | Skills from the local Addy Osmani repository clone. |
+| `{env:OPENCODE_WORKSPACE}/mlflow-skills` | Skill source | Skill folders from the local MLflow repository clone. |
+| `{env:OPENCODE_WORKSPACE}/anthropic-skills/skills` | Skill source | Skills from the local Anthropic repository clone. Review upstream terms before redistributing content. |
 
-The tracked template is [`config/opencode.jsonc.example`](config/opencode.jsonc.example). It uses `{env:OPENCODE_WORKSPACE}` instead of hard-coding a specific drive or Windows username. The setup script sets `OPENCODE_WORKSPACE` for the current user and can install the template into the active global config after you approve it.
+The setup script stores `OPENCODE_WORKSPACE` with forward slashes (for example, `D:/Dev/openCODE`) to avoid Windows backslash-escaping problems during environment-variable substitution in the JSONC file.
 
-The key distinction in the configuration is:
+### B. Active global configuration — loaded by OpenCode
 
-- `plugins` enables the Superpowers integration for OpenCode V2.
-- `skills` adds the selected skill directories as discovery sources.
-- OpenAgents agents/commands/context are discovered from the global config folders installed by the setup script; they are not listed as skills.
+**File on Windows:** `%USERPROFILE%\.config\opencode\opencode.jsonc`
 
-OpenCode V2 supports `opencode.json` and `opencode.jsonc`, global configuration at `~/.config/opencode/`, and additional skill source directories. See the official [configuration docs](https://dev.opencode.ai/v2/docs/config/) and [skills docs](https://dev.opencode.ai/v2/docs/skills/). Superpowers' V2 instructions are in its [OpenCode install guide](https://github.com/obra/superpowers/blob/main/.opencode/INSTALL.md).
+This is the live configuration file for your user account. The setup script can install the portable template here after prompting. If you already have a working config, do not blindly replace it; merge the `plugins` and `skills` keys, preserving your other settings. Do not create duplicate keys with the same names.
 
-## How to use it day to day
+If you set the variable manually instead of running the setup script, from the workspace root use:
+
+```powershell
+$workspace = (Resolve-Path .).Path.Replace('\', '/')
+[Environment]::SetEnvironmentVariable('OPENCODE_WORKSPACE', $workspace, 'User')
+$env:OPENCODE_WORKSPACE = $workspace
+```
+
+Then reopen/restart OpenCode and confirm the paths exist. Do not put a raw Windows path such as `D:\Users\name\...` into the tracked example. Keep the template portable by using `{env:OPENCODE_WORKSPACE}`.
+
+### OpenAgents agents, commands, and context are separate
+
+OpenAgents is **not** loaded through the `skills` array. If the setup script's first prompt is approved, it copies these folders from the local `openagents-repo` clone into the global OpenCode directory:
+
+| Source in this repository | Global destination | Purpose |
+|---|---|---|
+| `openagents-repo/.opencode/agent/` | `%USERPROFILE%\.config\opencode\agents\` | Primary agents and specialist subagents. |
+| `openagents-repo/.opencode/command/` | `%USERPROFILE%\.config\opencode\commands\` | Slash-command prompt templates; available commands depend on the source snapshot. |
+| `openagents-repo/.opencode/context/` | `%USERPROFILE%\.config\opencode\context\` | Standards and workflow context referenced by agents and commands. |
+
+The script also rewrites the context reference in the installed global `openagent.md` to point at the installed global context directory. The local `openagents-repo` is ignored by the outer Git repository, so any changes made inside that clone are not preserved by a commit to this workspace. Keep important fixes in a fork or as a reviewed patch in a tracked directory.
+
+For version-specific configuration behavior, consult the official [OpenCode V2 configuration docs](https://dev.opencode.ai/v2/docs/config/), [OpenCode V2 skills docs](https://dev.opencode.ai/v2/docs/skills/), and [Superpowers OpenCode installation guide](https://github.com/obra/superpowers/blob/main/.opencode/INSTALL.md). OpenCode V1 uses a different Superpowers configuration key (`plugin`, singular); this template uses the V2 key (`plugins`, plural).
+
+## Using the workspace
 
 ### Skills
 
-Ask OpenCode naturally, and name the skill when you want to be explicit:
+Ask OpenCode to use a skill by describing the workflow, or name the skill directly. Examples:
 
-- `Use the brainstorming skill to help refine this feature before coding.`
+- `Use the brainstorming skill to refine this feature before coding.`
 - `Use the systematic-debugging skill. Reproduce the issue before proposing a fix.`
 - `Use the huggingface-llm-trainer skill to plan fine-tuning; inspect the hardware and dataset first.`
 - `Use the agent-evaluation skill to design an evaluation dataset and scorer plan for my agent.`
 - `Use the frontend-ui-engineering skill to review this UI for layout, accessibility, and responsiveness.`
 
-You can ask OpenCode to use the native skill tool to list available skills or load a named skill. Skill selection remains model-driven; installed skills are discoverable but not all loaded into every prompt at once.
+You can ask OpenCode to use its native skill tool to list discovered skills or load a named skill. Skill instructions are loaded on demand; not every skill is inserted into every prompt automatically.
 
 ### Agents
 
 ```powershell
-# Start an interactive session in the current project
+# Start an interactive OpenCode session in the current project
 opencode .
 
-# Ask the plan-first main agent a read-only question
+# Ask the plan-first agent for a read-only architecture map
 opencode run --agent openagent "Map the project architecture. Do not modify files."
 
-# Ask the coding-focused agent for review only
+# Ask the coding-focused agent for a review only
 opencode run --agent opencoder "Review the architecture and list concrete improvements. Do not modify files."
 ```
 
-For implementation tasks, OpenAgent's intended pattern is: inspect relevant context/standards → propose a plan → wait for approval → implement incrementally → validate → report results. Still review agent plans and tool permissions; do not assume a prompt alone is a security boundary.
+For implementation tasks, the intended OpenAgent workflow is to inspect relevant context, propose a plan, wait for approval, implement incrementally, validate, and report results. Review plans and tool permissions yourself; a prompt alone is not a security boundary.
 
 ### Slash commands
 
-Once the global command files have been installed, test commands inside the OpenCode TUI by typing `/` and selecting a discovered command. The source snapshot contains commands such as `/test`, `/commit`, `/context`, `/optimize`, `/validate-repo`, and `/build-context-system`; specific commands may rely on project files or optional tools.
+After the global command files have been installed, open the OpenCode TUI and type `/` to browse discovered commands. The source snapshot contains commands such as `/test`, `/commit`, `/context`, `/optimize`, `/validate-repo`, and `/build-context-system`, but availability depends on which files are present and whether a command's dependencies are installed.
 
-### Updating skill copies
+## Updating skills and source repositories
 
-The checked-in `skills-lock.json` records the source and hash for the selected skill copies. From the workspace root, you can check/update installed project skills with:
+The tracked `skills-lock.json` records the selected skill sources and hashes. From the workspace root, inspect changes after updating selected skills:
 
 ```powershell
 npx skills update --project --yes
+git status --short
 ```
 
-Review the Git diff afterwards. To browse or add a skill from a source repo:
+To browse skills available from upstream sources:
 
 ```powershell
 npx skills add mattpocock/skills --list
@@ -222,9 +281,9 @@ npx skills add huggingface/skills --list
 npx skills add addyosmani/agent-skills --list
 ```
 
-Add selected skills with `--skill <name>` rather than installing everything blindly. Preserve support files referenced by a skill, not only `SKILL.md`.
+Add only the skills you need, rather than installing every skill blindly. Preserve supporting files referenced by a skill, not just `SKILL.md`.
 
-To update a source clone manually:
+The setup script clones missing repositories but does not pull updates into existing clones. To update a clone manually:
 
 ```powershell
 git -C .\addyosmani-agent-skills pull --ff-only
@@ -233,50 +292,50 @@ git -C .\anthropic-skills pull --ff-only
 git -C .\openagents-repo pull --ff-only
 ```
 
-After updating OpenAgents, rerun `scripts/setup-opencode.ps1` to refresh the global copies; back up and review your local changes first.
+After updating OpenAgents, rerun `scripts/setup-opencode.ps1` if you want its agent, command, and context files copied globally again. Back up and review local changes before refreshing those files.
 
-## Committing this workspace to your Git repository
+## Committing this workspace
 
-This workspace is set up so the outer repository tracks your selected skill copies, lock file, documentation, portable config template, and setup script—**not the full working checkouts of each upstream project**. The source clone folders are ignored and recreated by the setup script. This avoids accidentally nesting Git repositories inside the outer repo.
+The outer repository should track your selected skill copies, `skills-lock.json`, documentation, portable config template, and setup script—not the full Git checkouts of upstream projects.
 
-Before committing, run:
+Before committing, review the worktree:
 
 ```powershell
 git status --short
 ```
 
-Then add the files you intend to track explicitly:
+Stage the files that belong in the outer repository explicitly:
 
 ```powershell
 git add README.md AGENTS.md .gitignore skills-lock.json .agents/skills config/README.md config/opencode.jsonc.example scripts/setup-opencode.ps1
 git status --short
-git commit -m "Document portable OpenCode workspace"
+git commit -m "docs: improve portable OpenCode workspace setup"
 ```
 
-If you already staged the cloned upstream folders or the exported global `config/agents`, `config/commands`, `config/context`, unstage them before committing. If you made a fix inside an ignored source clone (especially an OpenAgents plugin fix), it will **not** be saved by the outer repository. Push that change to a fork you control or keep a reviewed patch under a tracked `patches/` folder.
-
-## GitHub hygiene, licenses, and security
-
-- Keep API keys, `.env` files, model credentials, Telegram tokens, local logs, `node_modules`, and the active machine-specific `config/opencode.jsonc` out of Git. Use `config/opencode.jsonc.example` as the portable template.
-- The supplied global-config archive includes hard-coded paths under `C:/Users/adity/.config/opencode/`. Those paths are machine-specific and should not be committed as a reusable config. The setup script regenerates the runtime copy from upstream source and rewrites the necessary runtime reference for the current account.
-- The root `.gitignore` excludes source clone folders (`addyosmani-agent-skills`, `anthropic-skills`, `mlflow-skills`, `openagents-repo`) because each is its own upstream Git repository and they can be cloned by the setup script. This avoids accidentally adding embedded Git repositories into your main repository.
-- If you already ran `git add` on a nested clone before adding `.gitignore`, `.gitignore` will not untrack it automatically. Check `git status` and, if necessary, unstage/remove it from the index carefully (for example, `git rm -r --cached -- <folder>` keeps the local files but removes that folder from the outer repository's index).
-- **Anthropic document skills:** The upstream repository identifies `docx`, `pdf`, `pptx`, and `xlsx` as source-available rather than open-source; their individual license files impose additional restrictions on copying and redistribution. This workspace ignores the upstream clone so those files are not distributed from your public repo. Review the upstream terms before storing or redistributing any of those files.
-- OpenAgents' optional plugins/tools and skill scripts can execute code. Read their source, install their dependencies deliberately, and don't put API keys directly in Markdown, JSONC, or Git history.
-- The attached ZIP snapshot still showed the older V1-style `agent-validator.ts` import (`@opencode-ai/plugin`) and V1-style notification-plugin exports, even though a later fix was reported in chat. The setup script intentionally does not install optional plugin/tool code. Before relying on that plugin on another machine, verify that the fixed version is present; preserve your fix in your own fork or as a patch because the `openagents-repo/` clone is ignored by the outer Git repository.
+Adjust the `git add` command if your repository's tracked file layout differs. Do not stage ignored source clones or an exported copy of your global configuration. If a nested clone was already added to the outer repository's index before `.gitignore` was updated, inspect `git status` and carefully remove it from the index with `git rm -r --cached -- <folder>`; this keeps local files on disk.
 
 ## Troubleshooting
 
 | Symptom | What to check |
 |---|---|
-| `/agents` shows only `build` and `plan` | Restart OpenCode; run `opencode debug agents`; confirm `openagent.md` and `opencoder.md` exist in `%USERPROFILE%\.config\opencode\agents`. |
-| Skills are missing | Check `OPENCODE_WORKSPACE` in a new terminal (`$env:OPENCODE_WORKSPACE`), then check each configured path exists and contains folders with `SKILL.md`. Ask OpenCode to use its skill tool to list discovered skills. |
-| Superpowers skills are missing | Confirm the V2 `plugins` entry is present and the plugin loaded; restart the OpenCode service/session. See the [Superpowers install guide](https://github.com/obra/superpowers/blob/main/.opencode/INSTALL.md). |
-| OpenAgents installer reports `Installed: 0` | Don't treat a final “Installation complete” banner as success. This workspace uses the local-copy script because the Advanced installer attempt in the inspected setup failed all 68 components. |
-| `head`, `ls -la`, or other Unix command syntax fails | You are in PowerShell. Ask the agent to use PowerShell-compatible commands, or run OpenCode from Git Bash/WSL if that is your intended shell. |
-| A skill needs an unavailable Python/Node tool or API | Read its `SKILL.md` and referenced docs; install the actual runtime/tool separately and configure credentials via environment variables. |
+| Skills are missing | In a new PowerShell window, check `$env:OPENCODE_WORKSPACE`; confirm each configured path exists and contains skill folders with `SKILL.md`. Ask OpenCode to list skills using its native skill tool. |
+| Superpowers skills are missing | Verify OpenCode V2 is in use, the `plugins` entry is present, and the plugin loaded. Restart OpenCode. Follow the [Superpowers install guide](https://github.com/obra/superpowers/blob/main/.opencode/INSTALL.md). |
+| `openagent` or `opencoder` is missing | Rerun the setup script and approve the first OpenAgents installation prompt. Confirm the files exist under `%USERPROFILE%\.config\opencode\agents\`, then restart OpenCode and run `opencode debug agents`. |
+| The script finished but agents were not installed | If you answered `NO` to the first prompt, the script exited before copying the global files. Rerun it and type `YES` at that prompt. |
+| A source clone folder exists but setup errors | Inspect the folder and its expected subdirectories. The script does not delete or repair an existing folder whose expected paths are missing. Rename/repair it manually, then rerun setup. |
+| A skill requires a missing Python/Node tool, API, or cloud resource | Read its `SKILL.md` and linked documentation, install the required runtime separately, and configure credentials through environment variables. |
+| Unix commands such as `ls -la` or `head` fail | You are likely using PowerShell. Use PowerShell-compatible commands or run OpenCode from Git Bash/WSL if that is your preferred shell. |
+| Superpowers Git-based installation fails on Windows | See the Windows-specific workaround in the upstream [Superpowers install guide](https://github.com/obra/superpowers/blob/main/.opencode/INSTALL.md). |
 
-## Upstream sources
+## Security and licensing notes
+
+- Never commit API keys, `.env` files, model credentials, tokens, private logs, or the live machine-specific `opencode.jsonc`.
+- The source-clone folders (`addyosmani-agent-skills`, `anthropic-skills`, `mlflow-skills`, and `openagents-repo`) should remain ignored by the outer Git repository. They are fetched locally by the setup script.
+- Review the license terms in each upstream repository before redistributing copied skill content. Some repositories or individual skill folders may have additional restrictions.
+- OpenAgents optional plugins/tools and skill scripts may execute code. Inspect source code and install dependencies deliberately. Do not put secrets directly in Markdown, JSONC, or Git history.
+- Keep fixes made inside ignored source clones in a fork you control or in a reviewed patch under a tracked directory; otherwise those changes will not be included in commits to this workspace.
+
+## Upstream projects
 
 - [obra/superpowers](https://github.com/obra/superpowers)
 - [mattpocock/skills](https://github.com/mattpocock/skills)
@@ -285,4 +344,4 @@ If you already staged the cloned upstream folders or the exported global `config
 - [mlflow/skills](https://github.com/mlflow/skills)
 - [anthropics/skills](https://github.com/anthropics/skills)
 - [remcocats/opencode-agents](https://github.com/remcocats/opencode-agents)
-- [vercel-labs/agent-browser](https://github.com/vercel-labs/agent-browser) (extra skill/tool, separate from the seven repositories above)
+- [vercel-labs/agent-browser](https://github.com/vercel-labs/agent-browser) — additional skill/tool, separate from the seven core projects above
