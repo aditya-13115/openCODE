@@ -134,9 +134,36 @@ opencode run --agent openagent "Explain your workflow. Do not modify files or ex
 
 Inside the OpenCode TUI, use `/agents` to choose a primary agent and type `/` to inspect available commands. Specialist subagents (for example reviewer/tester) are generally delegated to by the main agent rather than selected as primary agents.
 
-## Portable OpenCode config
+## OpenCode JSONC configuration
 
-The tracked template is [`config/opencode.jsonc.example`](config/opencode.jsonc.example). It uses `{env:OPENCODE_WORKSPACE}` for skill paths rather than hard-coding `D:\CODIN PLAYGROUND\openCODE` or a specific Windows username.
+OpenCode reads your active user-level configuration from this file on Windows:
+
+```text
+%USERPROFILE%\.config\opencode\opencode.jsonc
+```
+
+To manually configure the same setup used on the original machine, open that file and add the following keys. If the file already contains settings, **merge these keys into the existing JSONC**—do not replace unrelated settings or create duplicate `plugins` or `skills` keys.
+
+```jsonc
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugins": [
+    "superpowers@git+https://github.com/obra/superpowers.git"
+  ],
+  "skills": [
+    "D:/CODIN PLAYGROUND/openCODE/.agents/skills",
+    "D:/CODIN PLAYGROUND/openCODE/addyosmani-agent-skills/skills",
+    "D:/CODIN PLAYGROUND/openCODE/mlflow-skills",
+    "D:/CODIN PLAYGROUND/openCODE/anthropic-skills/skills"
+  ]
+}
+```
+
+**Important:** Those four skill paths are absolute paths for the original Windows machine. If your workspace is in a different location, update each path to match it. The source-clone directories (`addyosmani-agent-skills`, `mlflow-skills`, and `anthropic-skills`) must exist locally and contain skill folders with `SKILL.md` files.
+
+### Portable configuration for GitHub
+
+The tracked template is [`config/opencode.jsonc.example`](config/opencode.jsonc.example). It uses `{env:OPENCODE_WORKSPACE}` instead of hard-coding a specific drive or Windows username. The setup script sets `OPENCODE_WORKSPACE` for the current user and can install the template into the active global config after you approve it.
 
 The key distinction in the configuration is:
 
