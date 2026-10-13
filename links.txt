@@ -1,0 +1,9 @@
+List of original git repos:
+
+https://github.com/obra/superpowers
+https://github.com/mattpocock/skills
+https://github.com/huggingface/skills
+https://github.com/addyosmani/agent-skills
+https://github.com/mlflow/skills
+https://github.com/anthropics/skills
+https://github.com/remcocats/opencode-agents

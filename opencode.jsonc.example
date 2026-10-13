@@ -1,0 +1,12 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugins": [
+    "superpowers@git+https://github.com/obra/superpowers.git"
+  ],
+  "skills": [
+    "{env:OPENCODE_WORKSPACE}/.agents/skills",
+    "{env:OPENCODE_WORKSPACE}/addyosmani-agent-skills/skills",
+    "{env:OPENCODE_WORKSPACE}/mlflow-skills",
+    "{env:OPENCODE_WORKSPACE}/anthropic-skills/skills"
+  ]
+}
