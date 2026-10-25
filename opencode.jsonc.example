@@ -8,5 +8,17 @@
     "{env:OPENCODE_WORKSPACE}/addyosmani-agent-skills/skills",
     "{env:OPENCODE_WORKSPACE}/mlflow-skills",
     "{env:OPENCODE_WORKSPACE}/anthropic-skills/skills"
-  ]
+  ],
+  "mcp": {
+    "servers": {
+      "skill-issue": {
+        "type": "remote",
+        "url": "https://skill-issue.in/api/mcp"
+      },
+      "context7": {
+        "type": "remote",
+        "url": "https://mcp.context7.com/mcp"
+      }
+    }
+  }
 }
