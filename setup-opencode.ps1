@@ -4,10 +4,10 @@ param()
 
 $ErrorActionPreference = 'Stop'
 
-$workspace = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$workspace = (Resolve-Path $PSScriptRoot).Path
 $workspaceForConfig = $workspace.Replace('\', '/')
 $globalConfig = Join-Path $env:USERPROFILE '.config\opencode'
-$template = Join-Path $workspace 'config\opencode.jsonc.example'
+$template = Join-Path $workspace 'opencode.jsonc.example'
 
 Write-Host "Workspace: $workspace"
 Write-Host "Global OpenCode config: $globalConfig"
@@ -100,12 +100,12 @@ if (Test-Path $openAgent) {
     }
 }
 
-$replaceJson = Read-Host 'Replace the active global opencode.jsonc with config/opencode.jsonc.example? This replaces its settings after backup. Type YES to continue'
+$replaceJson = Read-Host 'Replace the active global opencode.jsonc with opencode.jsonc.example? This replaces its settings after backup. Type YES to continue'
 if ($replaceJson -ceq 'YES') {
     Copy-Item -Path $template -Destination $activeConfig -Force
     Write-Host 'Installed the portable OpenCode config template.'
 } else {
-    Write-Warning 'The active opencode.jsonc was not changed. Merge the plugins and skills keys from config/opencode.jsonc.example manually.'
+    Write-Warning 'The active opencode.jsonc was not changed. Merge the plugins and skills keys from opencode.jsonc.example manually.'
 }
 
 Write-Host ''

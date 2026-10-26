@@ -2,9 +2,9 @@
 
 A Windows-first, reusable OpenCode workspace that brings together AI engineering skills, structured agent workflows, and specialist tools for software development, AI/ML, LLM applications, evaluation, and browser automation.
 
-The repository keeps selected skills in `.agents/skills/`, a portable OpenCode configuration template in `config/`, and a PowerShell setup script that downloads the required source repositories and can install OpenAgents agents, commands, and context into the current Windows user's global OpenCode configuration.
+The repository keeps selected skills in `.agents/skills/`, a portable OpenCode configuration template (`opencode.jsonc.example`), and PowerShell setup scripts at the repository root that download the required source repositories and can install OpenAgents agents, commands, and context into the current Windows user's global OpenCode configuration.
 
-> **Important:** Commit `config/opencode.jsonc.example`, not a machine-specific active configuration. The active user configuration is normally `%USERPROFILE%\.config\opencode\opencode.jsonc`. Never commit API keys, `.env` files, tokens, local logs, or other secrets.
+> **Important:** Commit `opencode.jsonc.example`, not a machine-specific active configuration. The active user configuration is normally `%USERPROFILE%\.config\opencode\opencode.jsonc`. Never commit API keys, `.env` files, tokens, local logs, or other secrets.
 
 ## Contents
 
@@ -14,6 +14,7 @@ The repository keeps selected skills in `.agents/skills/`, a portable OpenCode c
 - [Quick start on Windows](#quick-start-on-windows)
 - [Configuration explained](#configuration-explained)
 - [Using the workspace](#using-the-workspace)
+- [Using the same setup in Claude Code](#using-the-same-setup-in-claude-code)
 - [Updating skills and source repositories](#updating-skills-and-source-repositories)
 - [Troubleshooting](#troubleshooting)
 - [Security and licensing notes](#security-and-licensing-notes)
@@ -69,11 +70,10 @@ openCODE/
 ├── skills-lock.json
 ├── .agents/
 │   └── skills/                    # selected skill copies
-├── config/
-│   ├── README.md
-│   └── opencode.jsonc.example     # portable config template
-├── scripts/
-│   └── setup-opencode.ps1         # Windows setup script
+├── opencode.jsonc.example         # portable OpenCode config template
+├── setup-opencode.ps1             # OpenCode setup script
+├── setup-claude-code.ps1          # mirrors this setup into global Claude Code
+├── docs/engineering/              # agent work/error logs
 ├── addyosmani-agent-skills/       # local upstream clone; ignored by Git
 ├── anthropic-skills/              # local upstream clone; ignored by Git
 ├── mlflow-skills/                 # local upstream clone; ignored by Git
@@ -92,7 +92,7 @@ The active global OpenCode configuration and OpenAgents files live outside the r
 └── context\
 ```
 
-The local `config/` folder is tracked documentation/template content. OpenCode does not automatically load `config/opencode.jsonc.example` just because it exists in this repository.
+The tracked `opencode.jsonc.example` is a template only. OpenCode does not automatically load it just because it exists in this repository.
 
 ## Quick start on Windows
 
@@ -118,7 +118,7 @@ Run this from the cloned repository root:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass -Force
-.\scripts\setup-opencode.ps1
+.\setup-opencode.ps1
 ```
 
 The script performs these steps:
@@ -168,7 +168,7 @@ There are two distinct configuration files.
 
 ### A. Portable template — tracked in Git
 
-**File:** `config/opencode.jsonc.example`
+**File:** `opencode.jsonc.example`
 
 This is the reusable template for GitHub. Do not put your personal drive, folder, or Windows username in it. The setup script creates the `OPENCODE_WORKSPACE` environment variable for the current clone location.
 
@@ -264,6 +264,91 @@ For implementation tasks, the intended OpenAgent workflow is to inspect relevant
 
 After the global command files have been installed, open the OpenCode TUI and type `/` to browse discovered commands. The source snapshot contains commands such as `/test`, `/commit`, `/context`, `/optimize`, `/validate-repo`, and `/build-context-system`, but availability depends on which files are present and whether a command's dependencies are installed.
 
+## Using the same setup in Claude Code
+
+The same skills, plugin, MCP servers, rules, agents, and commands are also available in [Claude Code](https://docs.claude.com/en/docs/claude-code) at the **global (user) level**, so they work in every project.
+
+### Which script to run
+
+There are no `.bat` files. Both setup scripts are PowerShell scripts:
+
+| Script | What it sets up | When to run it |
+|---|---|---|
+| `setup-opencode.ps1` | OpenCode: clones the upstream repos, sets `OPENCODE_WORKSPACE`, installs OpenAgents agents/commands/context into `%USERPROFILE%\.config\opencode\` | First time, and after pulling `openagents-repo` |
+| `setup-claude-code.ps1` | Claude Code: links the skills, adds the MCP servers, installs Superpowers, creates `CLAUDE.md`, converts agents, and copies commands into `%USERPROFILE%\.claude\` | After `setup-opencode.ps1`, and whenever you add a new skill folder, agent, command, or MCP server |
+
+Run them in that order from the workspace root. `setup-claude-code.ps1` reads the clones and the installed OpenCode agents/commands, so it needs OpenCode set up first:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass -Force
+.\setup-claude-code.ps1
+```
+
+`setup-claude-code.ps1` requires the `claude` CLI on `PATH`. It doesn't need admin rights, because junctions don't.
+
+**Safety behavior:** the script first backs up `~/.claude/settings.json`, `~/.claude.json`, `CLAUDE.md`, `agents/`, and `commands/` to `~/.claude/backups/openCODE-<timestamp>/`. It **never deletes or overwrites** anything. Items that already exist are reported as "already present" and left alone, so it is safe to re-run. Each run creates a new backup folder, and old ones can be deleted.
+
+### What gets installed where
+
+| OpenCode (`opencode.jsonc` / `~/.config/opencode`) | Claude Code (`~/.claude`, `~/.claude.json`) | How it is linked |
+|---|---|---|
+| `plugins` → Superpowers | Plugin `superpowers@claude-plugins-official` (user scope) | Installed separately. Each tool manages its own copy |
+| `mcp.servers` → `skill-issue`, `context7` | User MCP servers in `~/.claude.json` | Configured separately |
+| `skills` (the four folders) | `~/.claude/skills/<name>` → a **junction** to the skill folder in this repo | **Shared files**: both tools read the same folder |
+| `AGENTS.md` | `~/.claude/CLAUDE.md` contains `@C:/Users/<you>/.config/opencode/AGENTS.md` | **Shared file**, imported by Claude Code |
+| `agents/` (OpenAgents) | `~/.claude/agents/*.md` (flattened, frontmatter converted) | **Copy**, converted once |
+| `commands/` (OpenAgents) | `~/.claude/commands/` (`context.md` → `oa-context.md`) | **Copy** |
+| `context/` (OpenAgents) | Not copied. Agents that reference it read it from `~/.config/opencode/context/` | Shared, read in place |
+
+Deliberately **not** linked:
+
+- `.agents/skills/code-review`: its name would shadow Claude Code's built-in `/code-review`.
+- `anthropic-skills/skills/{claude-api,docx,pdf,pptx,xlsx,skill-creator}`: Claude accounts already get these as `anthropic-skills:*`.
+- The MLflow, Addy Osmani, and Anthropic **plugins**. Only their skill folders are linked, which avoids the MLflow plugin's Python hook that runs on every prompt.
+
+### How each part behaves in Claude Code
+
+| Part | How to use it |
+|---|---|
+| **Skills** | Claude loads one automatically when your request matches its description. You can also call one directly as a slash command (`/tdd`, `/grilling`, `/huggingface-llm-trainer`) or say "use the `<name>` skill". `/skills` lists them all. |
+| **Superpowers** | Its skills carry the plugin prefix: `/superpowers:brainstorming`, `/superpowers:systematic-debugging`, `/superpowers:writing-plans`, … |
+| **Commands** | `/commit`, `/test`, `/oa-context`, `/optimize`, `/clean`, `/worktrees`, `/validate-repo`, `/build-context-system`, `/prompt-engineering:prompt-enhancer`. **Note:** `/commit` commits *and pushes* without asking. |
+| **Subagents** | `reviewer`, `tester`, `coder-agent`, `build-agent`, `task-manager`, `documentation`, `codebase-pattern-analyst`, … Ask for one by name ("use the reviewer agent on my last commit") or pick it with `@`. `/agents` lists and edits them. |
+| **Primary agents** | `openagent`, `opencoder`, `system-builder` were "main mode" agents in OpenCode. Start a session as one with `claude --agent openagent`, or set `"agent": "openagent"` in `~/.claude/settings.json` to make it the default. |
+| **MCP servers** | They're available in every session. Ask naturally, for example "How do I configure Next.js 15 middleware? use context7". `/mcp` shows status and handles sign-in. |
+| **Global rules** | `AGENTS.md` applies to every project. `/memory` shows the loaded `CLAUDE.md`. A project's own `CLAUDE.md` or `.claude/` folder adds to the global one or overrides it. |
+
+Differences from OpenCode:
+
+- OpenCode agent `permissions`, `temperature`, and `mode` have no per-agent equivalent in Claude Code, so they are dropped. Those deny rules (for example, edits to `.env` files) are **not enforced** for the converted agents. Use Claude Code's permission settings if you need them.
+- Agents whose OpenCode tools were custom (for example, `image-specialist`'s Gemini tools) only keep the built-in tools.
+
+### Updating: what syncs automatically and what doesn't
+
+| You change… | OpenCode | Claude Code | What to do |
+|---|---|---|---|
+| A skill's files in this repo (edit, or `git pull` in a clone, or `npx skills update`) | ✅ | ✅ (junction) | Nothing. Restart the session |
+| `~/.config/opencode/AGENTS.md` | ✅ | ✅ (import) | Nothing. Edit **that** file for both tools. The repo's `AGENTS.md` is a separate copy |
+| A **new** skill folder added to one of the four sources | ✅ | ❌ | Re-run `setup-claude-code.ps1` |
+| A skill folder removed or renamed | ✅ | ⚠ broken junction | Delete the stale `~/.claude/skills/<name>` junction (this removes only the link, not the repo folder), then re-run |
+| OpenAgents agents/commands (after `git pull` in `openagents-repo`) | Re-run `setup-opencode.ps1` | ❌ copies are not refreshed | Re-run `setup-opencode.ps1`. Then delete or rename the outdated file in `~/.claude/agents/` or `~/.claude/commands/` and re-run `setup-claude-code.ps1`. Existing files are never overwritten |
+| A new OpenAgents agent/command file | Re-run `setup-opencode.ps1` | ❌ | Re-run `setup-opencode.ps1`, then `setup-claude-code.ps1` |
+| An MCP server added to `opencode.jsonc` | ✅ | ❌ | Add it to `$mcpServers` in `setup-claude-code.ps1` and re-run, or run `claude mcp add --scope user --transport http <name> <url>` |
+| The Superpowers version | OpenCode plugin manager | ❌ separate | `claude plugin update superpowers@claude-plugins-official`, then restart |
+| A plugin added to `opencode.jsonc` | ✅ | ❌ | `claude plugin install <name>@<marketplace> --scope user` if a Claude Code version exists |
+
+**Rule of thumb:** edit skills in this repo and rules in `~/.config/opencode/AGENTS.md`, and both tools pick up the change. Anything added *new* (skills, agents, commands, MCP servers, plugins) needs `setup-claude-code.ps1` re-run, or a `claude` CLI command.
+
+### Verify
+
+```powershell
+claude mcp list        # skill-issue and context7: Connected
+claude plugin list     # superpowers@claude-plugins-official: enabled
+(Get-ChildItem "$env:USERPROFILE\.claude\skills" | Where-Object LinkType -eq Junction).Count
+```
+
+In a new `claude` session, run `/skills`, `/agents`, and `/memory`, and type `/` to browse commands.
+
 ## Updating skills and source repositories
 
 The tracked `skills-lock.json` records the selected skill sources and hashes. From the workspace root, inspect changes after updating selected skills:
@@ -292,7 +377,7 @@ git -C .\anthropic-skills pull --ff-only
 git -C .\openagents-repo pull --ff-only
 ```
 
-After updating OpenAgents, rerun `scripts/setup-opencode.ps1` if you want its agent, command, and context files copied globally again. Back up and review local changes before refreshing those files.
+After updating OpenAgents, rerun `setup-opencode.ps1` if you want its agent, command, and context files copied globally again. Back up and review local changes before refreshing those files.
 
 ## Committing this workspace
 
@@ -307,7 +392,7 @@ git status --short
 Stage the files that belong in the outer repository explicitly:
 
 ```powershell
-git add README.md AGENTS.md .gitignore skills-lock.json .agents/skills config/README.md config/opencode.jsonc.example scripts/setup-opencode.ps1
+git add README.md AGENTS.md .gitignore skills-lock.json .agents/skills opencode.jsonc.example setup-opencode.ps1 setup-claude-code.ps1 docs/engineering
 git status --short
 git commit -m "docs: improve portable OpenCode workspace setup"
 ```
